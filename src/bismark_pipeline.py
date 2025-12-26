@@ -130,25 +130,6 @@ def process_cell_pipeline(output_dir, cell_id, fastq_dir, args):
     # 11. Merge R1 and R2 deduplicated BAMs
     cmd_merge_bam = f"samtools merge -f {final_bam} {r1_dedup_bam} {r2_dedup_bam}"
 
-    # 12. Generate ALLC file (allcools)
-    cmd_allc = (f'allcools bam-to-allc '
-                f'--bam_path {final_bam} '
-                f'--reference_fasta {args.reference_fasta} '
-                f'--output_path {allc_file} '
-                f'--cpu 1 ' # Explicitly setting cpu=1 as per snakefile example
-                f'--num_upstr_bases {args.num_upstr_bases} '
-                f'--num_downstr_bases {args.num_downstr_bases} '
-                f'--compress_level {args.compress_level} '
-                f'--save_count_df') # This generates the .count.csv file
-
-    # 13. Extract specific context (e.g., CGN) (allcools)
-    cmd_extract = (f'allcools extract-allc '
-                    f'--strandness merge '
-                    f'--allc_path {allc_file} '
-                    f'--output_prefix {mcg_context_prefix} ' # allcools adds the context and suffix
-                    f'--mc_contexts {args.mcg_context} '
-                    f'--chrom_size_path {args.chrom_size_path}')
-
     # 14. Cleanup Intermediate Files
     intermediate_files = [
         r1_trimmed_fq, r2_trimmed_fq, # Trimmed fastq
@@ -160,7 +141,6 @@ def process_cell_pipeline(output_dir, cell_id, fastq_dir, args):
         r1_dedup_bam, r2_dedup_bam, # Deduped bam before merge
         r1_dedup_matrix, r2_dedup_matrix, # Picard metrics
         final_bam, # Final merged bam
-        allc_file, allc_count_file # General ALLC file and its count
     ]
     # Construct rm command safely
     # files_to_remove_str = " ".join([f"'{f}'" for f in intermediate_files if os.path.exists(f)]) # Quote filenames
@@ -180,10 +160,7 @@ def process_cell_pipeline(output_dir, cell_id, fastq_dir, args):
         ("Deduplicate R1", cmd_dedup_r1),
         ("Deduplicate R2", cmd_dedup_r2),
         ("Merge BAMs", cmd_merge_bam),
-        ("Generate ALLC", cmd_allc),
-        ("Extract Context", cmd_extract),
-        #("Cleanup", cmd_cleanup)
-    ]
+        ]
 
     for name, cmd in commands:
         print(f"  Executing Step: {name} for {cell_id}", flush=True)
